@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -64,18 +65,18 @@ func doMsg(msg []byte) {
 	qq := strconv.FormatInt(m.UserID, 10)
 	header := m.Sender.Nickname + "(" + qq + ") : "
 
-	for _, v := range cc {
-		switch v.atype {
+	for _, cc := range cc {
+		switch cc.atype {
 		case "text", "reply":
-			push.Pushtext(header+v.data["text"], c.TgCode, 5)
+			push.Pushtext(header+cc.data["text"], c.TgCode, 5)
 		case "image", "record":
-			if v.data["url"] == "" {
+			if cc.data["url"] == "" {
 				push.Pushtext(header+m.Message, c.TgCode, 5)
 			}
-			go pushFile(v.data["url"], header)
+			go pushFile(cc.data["url"], header)
 
 		case "share":
-			push.Pushtext(header+v.data["url"], c.TgCode, 5)
+			push.Pushtext(header+cc.data["url"], c.TgCode, 5)
 		}
 	}
 }
@@ -121,21 +122,42 @@ const (
 	maxMessageSize = 1000000
 )
 
-func cqcode(code string) acqcode {
-	if strings.HasPrefix(code, "[") && strings.HasSuffix(code, "]") {
-		c := code[1 : len(code)-1]
-		l := strings.Split(c, ",")
-		cq := l[0][3:]
-		data := map[string]string{}
-		for _, v := range l[1:] {
-			i := strings.Index(v, "=")
-			data[v[:i]] = v[i+1:]
-		}
-		return acqcode{atype: cq, data: data}
+var cqcodeReg = regexp.MustCompile(`\[CQ:.*?\]`)
 
-	} else {
-		return acqcode{atype: "text", data: map[string]string{"text": code}}
+func cqcode(code string) []acqcode {
+	li := cqcodeReg.FindAllStringIndex(code, -1)
+
+	codelist := make([]acqcode, 0, len(li))
+
+	s := 0
+
+	for _, v := range li {
+		text := code[s:v[0]]
+		cq := code[v[0]:v[1]]
+		s = v[1] + 1
+		if text != "" {
+			codelist = append(codelist, acqcode{atype: "text", data: map[string]string{"text": text}})
+		}
+		codelist = append(codelist, cqcover(cq))
 	}
+	text := code[s:]
+	if text != "" {
+		codelist = append(codelist, acqcode{atype: "text", data: map[string]string{"text": text}})
+	}
+
+	return codelist
+}
+
+func cqcover(code string) acqcode {
+	c := code[1 : len(code)-1]
+	l := strings.Split(c, ",")
+	cq := l[0][3:]
+	data := map[string]string{}
+	for _, v := range l[1:] {
+		i := strings.Index(v, "=")
+		data[v[:i]] = v[i+1:]
+	}
+	return acqcode{atype: cq, data: data}
 }
 
 type acqcode struct {
