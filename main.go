@@ -64,18 +64,18 @@ func doMsg(msg []byte) {
 	qq := strconv.FormatInt(m.UserID, 10)
 	header := m.Sender.Nickname + "(" + qq + ") : "
 
-	for _, cc := range cc {
-		switch cc.atype {
+	for _, v := range cc {
+		switch v.atype {
 		case "text", "reply":
-			push.Pushtext(header+cc.data["text"], c.TgCode, 5)
+			push.Pushtext(header+v.data["text"], c.TgCode, 5)
 		case "image", "record":
-			if cc.data["url"] == "" {
+			if v.data["url"] == "" {
 				push.Pushtext(header+m.Message, c.TgCode, 5)
 			}
-			go pushFile(cc.data["url"], header)
+			go pushFile(v.data["url"], header)
 
 		case "share":
-			push.Pushtext(header+cc.data["url"], c.TgCode, 5)
+			push.Pushtext(header+v.data["url"], c.TgCode, 5)
 		}
 	}
 }
