@@ -93,7 +93,7 @@ func sendMsg(m message, code string) {
 
 	for _, cc := range cc {
 		switch cc.Type {
-		case "text", "reply":
+		case "text":
 			push.Pushtext(header+cc.Data["text"], code, 8)
 		case "image", "record":
 			if cc.Data["url"] == "" {
