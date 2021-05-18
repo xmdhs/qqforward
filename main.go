@@ -80,7 +80,7 @@ func doMsg(msg []byte) {
 			push.Pushtext(header+cc.data["url"], c.TgCode, 5)
 
 		default:
-			push.Pushtext(header + fmt.Sprint(cc), c.TgCode, 5)
+			push.Pushtext(header+fmt.Sprint(cc), c.TgCode, 5)
 		}
 	}
 }
@@ -135,6 +135,8 @@ func cqcode(code string) []acqcode {
 
 	s := 0
 
+	l := len(code)
+
 	for _, v := range li {
 		text := code[s:v[0]]
 		cq := code[v[0]:v[1]]
@@ -143,6 +145,10 @@ func cqcode(code string) []acqcode {
 			codelist = append(codelist, acqcode{atype: "text", data: map[string]string{"text": text}})
 		}
 		codelist = append(codelist, cqcover(cq))
+		if s >= l {
+			s = l
+			break
+		}
 	}
 	text := code[s:]
 	if text != "" {
