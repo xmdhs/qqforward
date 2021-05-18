@@ -13,8 +13,8 @@ import (
 	"time"
 )
 
-func Push(body []byte, ContentType string, _ int) {
-	for {
+func Push(body []byte, ContentType string, a int) {
+	for i := 0; i < a; i++ {
 		err := push(body, ContentType)
 		if err != nil {
 			log.Println(err)
