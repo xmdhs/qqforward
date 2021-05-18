@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"regexp"
@@ -63,7 +64,7 @@ func doMsg(msg []byte) {
 	cc := cqcode(m.Message)
 
 	qq := strconv.FormatInt(m.UserID, 10)
-	header := m.Sender.Nickname + "(" + qq + ") : "
+	header := m.Sender.Card + "(" + qq + "): "
 
 	for _, cc := range cc {
 		switch cc.atype {
@@ -77,6 +78,9 @@ func doMsg(msg []byte) {
 
 		case "share":
 			push.Pushtext(header+cc.data["url"], c.TgCode, 5)
+
+		default:
+			push.Pushtext(header + fmt.Sprint(cc))
 		}
 	}
 }
