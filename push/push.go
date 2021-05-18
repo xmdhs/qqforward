@@ -92,9 +92,10 @@ func pushtext(message, chatID string) error {
 
 var Pusherr = errors.New("推送失败")
 
-func Pushtext(message, chatID string, _ int) {
-	for {
-		err := pushtext(message, chatID)
+func Pushtext(message, chatID string, a int) {
+	var err error
+	for i := 0; i < a; i++ {
+		err = pushtext(message, chatID)
 		if err != nil {
 			log.Println(err)
 			time.Sleep(2 * time.Second)
