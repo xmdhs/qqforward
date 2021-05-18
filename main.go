@@ -97,7 +97,7 @@ func sendMsg(m message, code string) {
 			if cc.Data["url"] == "" {
 				push.Pushtext(header+m.Message, code, 8)
 			}
-			go pushFile(cc.Data["url"], header)
+			go pushFile(cc.Data["url"], header, code)
 		case "share":
 			push.Pushtext(header+cc.Data["url"], code, 8)
 		default:
@@ -124,21 +124,21 @@ func checkMsg(msg []byte) bool {
 	return false
 }
 
-func pushFile(url, header string) {
+func pushFile(url, header, id string) {
 	h := push.Split(header, 100)
 
 	b, ctype, err := push.Downloadimg(url, 8)
 	if err != nil {
-		push.Pushtext(header+url, c.TgCode, 5)
+		push.Pushtext(header+url, id, 5)
 
 	}
 	l := strings.Split(ctype, "/")
 	if len(l) != 2 {
-		push.Pushtext(header+url, c.TgCode, 5)
+		push.Pushtext(header+url, id, 5)
 		return
 	}
 	filename := tosha256(b) + "." + l[1]
-	buff, c, err := push.PostFile(filename, b, h[0], c.TgCode)
+	buff, c, err := push.PostFile(filename, b, h[0], id)
 	if err != nil {
 		log.Println(err)
 		return
