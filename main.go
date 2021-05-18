@@ -37,7 +37,9 @@ func main() {
 				}
 				conn.SetReadDeadline(time.Now().Add(pongWait))
 				doMsg(msg)
-				doPrivateMsg(msg)
+				if c.PrivateMsg {
+					doPrivateMsg(msg)
+				}
 			}
 		}()
 	}
