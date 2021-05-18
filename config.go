@@ -9,7 +9,7 @@ import (
 
 type config struct {
 	TgToken        string
-	QQgroup        map[int64]string
+	QQgroup        map[string]string
 	WsAddress      string
 	WsToken        string
 	PrivateMsg     bool

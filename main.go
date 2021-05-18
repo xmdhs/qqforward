@@ -73,7 +73,7 @@ func doMsg(msg []byte) {
 		log.Println(err)
 		return
 	}
-	id, ok := c.QQgroup[m.GroupID]
+	id, ok := c.QQgroup[strconv.FormatInt(m.GroupID, 10)]
 	if !ok {
 		return
 	}
