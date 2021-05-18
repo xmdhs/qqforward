@@ -80,7 +80,7 @@ func doMsg(msg []byte) {
 			push.Pushtext(header+cc.data["url"], c.TgCode, 5)
 
 		default:
-			push.Pushtext(header + fmt.Sprint(cc))
+			push.Pushtext(header + fmt.Sprint(cc), c.TgCode, 5)
 		}
 	}
 }
