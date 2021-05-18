@@ -15,4 +15,5 @@ type message struct {
 
 type sender struct {
 	Nickname string `json:"nickname"`
+	Card     string `json:"card"`
 }
