@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"html"
 	"io"
 	"log"
 	"mime/multipart"
-	"net/url"
 )
 
 func PostFile(filename string, file []byte, caption, chatid string) (bodyBuf *bytes.Buffer, ContentType string, err error) {
@@ -28,8 +26,6 @@ func PostFile(filename string, file []byte, caption, chatid string) (bodyBuf *by
 	if err != nil {
 		return nil, "", fmt.Errorf("postFile: %w", err)
 	}
-	caption = html.UnescapeString(caption)
-	caption = url.QueryEscape(caption)
 	err = bodyWriter.WriteField("caption", caption)
 	if err != nil {
 		return nil, "", fmt.Errorf("postFile: %w", err)

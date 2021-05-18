@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"html"
 	"log"
 	"net/http"
 	"regexp"
@@ -175,7 +176,7 @@ func cqcode(code string) []acqcode {
 		cq := code[v[0]:v[1]]
 		s = v[1]
 		if text != "" {
-			codelist = append(codelist, acqcode{Type: "text", Data: map[string]string{"text": text}})
+			codelist = append(codelist, acqcode{Type: "text", Data: map[string]string{"text": html.UnescapeString(text)}})
 		}
 		codelist = append(codelist, cqcover(cq))
 	}
@@ -184,7 +185,7 @@ func cqcode(code string) []acqcode {
 		text = code[s:]
 	}
 	if text != "" {
-		codelist = append(codelist, acqcode{Type: "text", Data: map[string]string{"text": text}})
+		codelist = append(codelist, acqcode{Type: "text", Data: map[string]string{"text": html.UnescapeString(text)}})
 	}
 
 	return codelist
@@ -197,7 +198,7 @@ func cqcover(code string) acqcode {
 	data := map[string]string{}
 	for _, v := range l[1:] {
 		i := strings.Index(v, "=")
-		data[v[:i]] = v[i+1:]
+		data[html.UnescapeString(v[:i])] = html.UnescapeString(v[i+1:])
 	}
 	return acqcode{Type: cq, Data: data}
 }

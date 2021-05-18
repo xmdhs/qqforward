@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"html"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -66,7 +65,6 @@ func SetTgkey(key string) {
 }
 
 func pushtext(message, chatID string) error {
-	message = html.UnescapeString(message)
 	message = url.QueryEscape(message)
 	msg := "chat_id=" + chatID + "&text=" + message
 	req, err := http.NewRequest("POST", "https://api.telegram.org/"+tgkey+"/sendMessage", strings.NewReader(msg))
