@@ -15,22 +15,27 @@ import (
 )
 
 func main() {
-	h := http.Header{}
-	h.Add("Authorization", "Bearer "+c.WsToken)
-	conn, _, err := websocket.DefaultDialer.Dial(c.WsAddress, h)
-	if err != nil {
-		panic(err)
-	}
-	defer conn.Close()
-
 	for {
-		_, msg, err := conn.ReadMessage()
+		h := http.Header{}
+		h.Add("Authorization", "Bearer "+c.WsToken)
+		conn, _, err := websocket.DefaultDialer.Dial(c.WsAddress, h)
 		if err != nil {
 			log.Println(err)
-			time.Sleep(1 * time.Second)
 			continue
 		}
-		doMsg(msg)
+		defer conn.Close()
+
+		conn.SetReadDeadline(time.Now().Add(pongWait))
+		for {
+			_, msg, err := conn.ReadMessage()
+			if err != nil {
+				log.Println(err)
+				time.Sleep(1 * time.Second)
+				break
+			}
+			conn.SetReadDeadline(time.Now().Add(pongWait))
+			doMsg(msg)
+		}
 	}
 }
 
@@ -59,17 +64,19 @@ func doMsg(msg []byte) {
 	qq := strconv.FormatInt(m.UserID, 10)
 	header := m.Sender.Nickname + "(" + qq + ") : "
 
-	switch cc.atype {
-	case "text", "reply":
-		push.Pushtext(header+cc.data["text"], c.TgCode, 5)
-	case "image", "record":
-		if cc.data["url"] == "" {
-			push.Pushtext(header+m.Message, c.TgCode, 5)
-		}
-		go pushFile(cc.data["url"], header)
+	for _, cc := range cc {
+		switch cc.atype {
+		case "text", "reply":
+			push.Pushtext(header+cc.data["text"], c.TgCode, 5)
+		case "image", "record":
+			if cc.data["url"] == "" {
+				push.Pushtext(header+m.Message, c.TgCode, 5)
+			}
+			go pushFile(cc.data["url"], header)
 
-	case "share":
-		push.Pushtext(header+cc.data["url"], c.TgCode, 5)
+		case "share":
+			push.Pushtext(header+cc.data["url"], c.TgCode, 5)
+		}
 	}
 }
 
