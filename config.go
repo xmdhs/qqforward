@@ -9,8 +9,7 @@ import (
 
 type config struct {
 	TgToken        string
-	TgCode         string
-	QQgroupID      int64
+	QQgroup        map[int64]string
 	WsAddress      string
 	WsToken        string
 	PrivateMsg     bool
@@ -31,6 +30,6 @@ func readConfig() {
 }
 
 func init() {
-	readConfig()
+	//readConfig()
 	push.SetTgkey(c.TgToken)
 }

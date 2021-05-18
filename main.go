@@ -73,10 +73,11 @@ func doMsg(msg []byte) {
 		log.Println(err)
 		return
 	}
-	if m.GroupID != c.QQgroupID {
+	id, ok := c.QQgroup[m.GroupID]
+	if !ok {
 		return
 	}
-	sendMsg(m, c.TgCode)
+	sendMsg(m, id)
 }
 
 func sendMsg(m message, code string) {
@@ -172,7 +173,7 @@ func cqcode(code string) []acqcode {
 			text = code[s:v[0]]
 		}
 		cq := code[v[0]:v[1]]
-		s = v[1] + 1
+		s = v[1]
 		if text != "" {
 			codelist = append(codelist, acqcode{Type: "text", Data: map[string]string{"text": text}})
 		}
