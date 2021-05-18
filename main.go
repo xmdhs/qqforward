@@ -30,7 +30,7 @@ func main() {
 			time.Sleep(1 * time.Second)
 			continue
 		}
-		go doMsg(msg)
+		doMsg(msg)
 	}
 }
 
@@ -66,7 +66,7 @@ func doMsg(msg []byte) {
 		if cc.data["url"] == "" {
 			push.Pushtext(header+m.Message, c.TgCode, 5)
 		}
-		pushFile(cc.data["url"], header)
+		go pushFile(cc.data["url"], header)
 
 	case "share":
 		push.Pushtext(header+cc.data["url"], c.TgCode, 5)
@@ -84,7 +84,7 @@ func pushFile(url, header string) {
 		push.Pushtext(header+url, c.TgCode, 5)
 		return
 	}
-	filename := tosha256(b)
+	filename := tosha256(b) + "." + l[1]
 	buff, c, err := push.PostFile(filename, b, header, c.TgCode)
 	if err != nil {
 		log.Println(err)
