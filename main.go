@@ -64,6 +64,10 @@ func doMsg(msg []byte) {
 	cc := cqcode(m.Message)
 
 	qq := strconv.FormatInt(m.UserID, 10)
+	name := m.Sender.Card
+	if name == "" {
+		name = m.Sender.Nickname
+	}
 	header := m.Sender.Card + "(" + qq + "): "
 
 	for _, cc := range cc {
