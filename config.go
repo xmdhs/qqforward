@@ -30,6 +30,6 @@ func readConfig() {
 }
 
 func init() {
-	//readConfig()
+	readConfig()
 	push.SetTgkey(c.TgToken)
 }
