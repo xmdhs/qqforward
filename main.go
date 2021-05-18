@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -24,21 +23,11 @@ func main() {
 	}
 	defer conn.Close()
 
-	cxt := context.Background()
-	cxt, cancel := context.WithCancel(cxt)
-
-	conn.SetReadLimit(maxMessageSize)
-	conn.SetReadDeadline(time.Now().Add(pongWait))
-	conn.SetPongHandler(func(string) error { conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
-
-	go ping(cxt, conn, cancel)
-
-	defer cancel()
-
 	for {
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
 			log.Println(err)
+			time.Sleep(1 * time.Second)
 			continue
 		}
 		go doMsg(msg)
@@ -109,29 +98,6 @@ func tosha256(data []byte) string {
 	s.Write(data)
 	b := s.Sum(nil)
 	return hex.EncodeToString(b)
-}
-
-func ping(cxt context.Context, conn *websocket.Conn, cancel context.CancelFunc) {
-	ticker := time.NewTicker(pingPeriod)
-	defer func() {
-		ticker.Stop()
-		conn.Close()
-		cancel()
-	}()
-	for {
-		select {
-		case <-ticker.C:
-			conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				log.Println(err)
-				return
-			}
-		case <-cxt.Done():
-			conn.SetWriteDeadline(time.Now().Add(writeWait))
-			conn.WriteMessage(websocket.CloseMessage, []byte{})
-			return
-		}
-	}
 }
 
 const (
