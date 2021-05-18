@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"regexp"
@@ -18,41 +17,56 @@ import (
 
 func main() {
 	for {
-		h := http.Header{}
-		h.Add("Authorization", "Bearer "+c.WsToken)
-		conn, _, err := websocket.DefaultDialer.Dial(c.WsAddress, h)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		defer conn.Close()
-
-		conn.SetReadDeadline(time.Now().Add(pongWait))
-		for {
-			_, msg, err := conn.ReadMessage()
+		func() {
+			h := http.Header{}
+			h.Add("Authorization", "Bearer "+c.WsToken)
+			conn, _, err := websocket.DefaultDialer.Dial(c.WsAddress, h)
 			if err != nil {
 				log.Println(err)
-				time.Sleep(1 * time.Second)
-				break
+				return
 			}
+			defer conn.Close()
+
 			conn.SetReadDeadline(time.Now().Add(pongWait))
-			doMsg(msg)
-		}
+			for {
+				_, msg, err := conn.ReadMessage()
+				if err != nil {
+					log.Println(err)
+					time.Sleep(1 * time.Second)
+					break
+				}
+				conn.SetReadDeadline(time.Now().Add(pongWait))
+				doMsg(msg)
+				doPrivateMsg(msg)
+			}
+		}()
 	}
 }
 
-func doMsg(msg []byte) {
-	var e event
-	err := json.Unmarshal(msg, &e)
+func doPrivateMsg(msg []byte) {
+	cond0 := checkMsg(msg)
+	if cond0 {
+		return
+	}
+	var m message
+	err := json.Unmarshal(msg, &m)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	if e.Type != "message" {
+	if m.MsgType != "private" {
+		return
+	}
+	sendMsg(m, c.PrivateMsgTgId)
+}
+
+func doMsg(msg []byte) {
+	cond0 := checkMsg(msg)
+	if cond0 {
 		return
 	}
 	var m message
-	err = json.Unmarshal(msg, &m)
+	err := json.Unmarshal(msg, &m)
 	if err != nil {
 		log.Println(err)
 		return
@@ -60,7 +74,10 @@ func doMsg(msg []byte) {
 	if m.GroupID != c.QQgroupID {
 		return
 	}
+	sendMsg(m, c.TgCode)
+}
 
+func sendMsg(m message, code string) {
 	cc := cqcode(m.Message)
 
 	qq := strconv.FormatInt(m.UserID, 10)
@@ -68,28 +85,46 @@ func doMsg(msg []byte) {
 	if name == "" {
 		name = m.Sender.Nickname
 	}
-	header := m.Sender.Card + "(" + qq + "): "
+	header := name + "(" + qq + "): "
 
 	for _, cc := range cc {
-		switch cc.atype {
+		switch cc.Type {
 		case "text", "reply":
-			push.Pushtext(header+cc.data["text"], c.TgCode, 5)
+			push.Pushtext(header+cc.Data["text"], code, 8)
 		case "image", "record":
-			if cc.data["url"] == "" {
-				push.Pushtext(header+m.Message, c.TgCode, 5)
+			if cc.Data["url"] == "" {
+				push.Pushtext(header+m.Message, code, 8)
 			}
-			go pushFile(cc.data["url"], header)
-
+			go pushFile(cc.Data["url"], header)
 		case "share":
-			push.Pushtext(header+cc.data["url"], c.TgCode, 5)
-
+			push.Pushtext(header+cc.Data["url"], code, 8)
 		default:
-			push.Pushtext(header+fmt.Sprint(cc), c.TgCode, 5)
+			b, err := json.Marshal(cc)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			push.Pushtext(header+string(b), code, 8)
 		}
 	}
 }
 
+func checkMsg(msg []byte) bool {
+	var e event
+	err := json.Unmarshal(msg, &e)
+	if err != nil {
+		log.Println(err)
+		return true
+	}
+	if e.Type != "message" {
+		return true
+	}
+	return false
+}
+
 func pushFile(url, header string) {
+	h := push.Split(header, 100)
+
 	b, ctype, err := push.Downloadimg(url, 8)
 	if err != nil {
 		push.Pushtext(header+url, c.TgCode, 5)
@@ -101,7 +136,7 @@ func pushFile(url, header string) {
 		return
 	}
 	filename := tosha256(b) + "." + l[1]
-	buff, c, err := push.PostFile(filename, b, header, c.TgCode)
+	buff, c, err := push.PostFile(filename, b, h[0], c.TgCode)
 	if err != nil {
 		log.Println(err)
 		return
@@ -117,17 +152,7 @@ func tosha256(data []byte) string {
 }
 
 const (
-	// Time allowed to write a message to the peer.
-	writeWait = 10 * time.Second
-
-	// Time allowed to read the next pong message from the peer.
 	pongWait = 60 * time.Second
-
-	// Send pings to peer with this period. Must be less than pongWait.
-	pingPeriod = (pongWait * 9) / 10
-
-	// Maximum message size allowed from peer.
-	maxMessageSize = 1000000
 )
 
 var cqcodeReg = regexp.MustCompile(`\[CQ:.*?\]`)
@@ -139,24 +164,24 @@ func cqcode(code string) []acqcode {
 
 	s := 0
 
-	l := len(code)
-
 	for _, v := range li {
-		text := code[s:v[0]]
+		var text string
+		if s < v[0] {
+			text = code[s:v[0]]
+		}
 		cq := code[v[0]:v[1]]
 		s = v[1] + 1
 		if text != "" {
-			codelist = append(codelist, acqcode{atype: "text", data: map[string]string{"text": text}})
+			codelist = append(codelist, acqcode{Type: "text", Data: map[string]string{"text": text}})
 		}
 		codelist = append(codelist, cqcover(cq))
-		if s >= l {
-			s = l
-			break
-		}
 	}
-	text := code[s:]
+	var text string
+	if s < len(code) {
+		text = code[s:]
+	}
 	if text != "" {
-		codelist = append(codelist, acqcode{atype: "text", data: map[string]string{"text": text}})
+		codelist = append(codelist, acqcode{Type: "text", Data: map[string]string{"text": text}})
 	}
 
 	return codelist
@@ -171,10 +196,10 @@ func cqcover(code string) acqcode {
 		i := strings.Index(v, "=")
 		data[v[:i]] = v[i+1:]
 	}
-	return acqcode{atype: cq, data: data}
+	return acqcode{Type: cq, Data: data}
 }
 
 type acqcode struct {
-	atype string
-	data  map[string]string
+	Type string            `json:"type"`
+	Data map[string]string `json:"data"`
 }

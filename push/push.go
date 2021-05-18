@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 func Push(body []byte, ContentType string, a int) {
@@ -92,7 +93,7 @@ func pushtext(message, chatID string) error {
 
 var Pusherr = errors.New("推送失败")
 
-func Pushtext(message, chatID string, a int) {
+func aPushtext(message, chatID string, a int) {
 	var err error
 	for i := 0; i < a; i++ {
 		err = pushtext(message, chatID)
@@ -103,4 +104,29 @@ func Pushtext(message, chatID string, a int) {
 		}
 		break
 	}
+}
+
+func Pushtext(message, chatID string, a int) {
+	l := Split(message, 4000)
+	for _, v := range l {
+		aPushtext(v, chatID, a)
+	}
+}
+
+func Split(s string, length int) []string {
+	r := []string{}
+	b := []byte(s)
+	for len(b) > length {
+		var n int
+		for i := 0; i < len(b) && n < length; i++ {
+			_, size := utf8.DecodeRune(b[n:])
+			n += size
+		}
+		r = append(r, string(b[:n]))
+		b = b[n:]
+	}
+	if len(b) != 0 {
+		r = append(r, string(b))
+	}
+	return r
 }

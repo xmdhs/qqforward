@@ -11,6 +11,7 @@ type message struct {
 	UserID  int64  `json:"user_id"`
 	Message string `json:"message"`
 	Sender  sender `json:"sender"`
+	MsgType string `json:"message_type"`
 }
 
 type sender struct {

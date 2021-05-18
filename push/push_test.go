@@ -1,5 +1,3 @@
-// +build no
-
 package push
 
 import (
@@ -21,4 +19,11 @@ func TestPush(t *testing.T) {
 		t.Fatal(err)
 	}
 	Push(by.Bytes(), c, 3)
+}
+
+func TestSplit(t *testing.T) {
+	l := Split("123", 200)
+	if l[0] != "123" {
+		t.Fatal(l)
+	}
 }

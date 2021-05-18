@@ -8,11 +8,13 @@ import (
 )
 
 type config struct {
-	TgToken   string
-	TgCode    string
-	QQgroupID int64
-	WsAddress string
-	WsToken   string
+	TgToken        string
+	TgCode         string
+	QQgroupID      int64
+	WsAddress      string
+	WsToken        string
+	PrivateMsg     bool
+	PrivateMsgTgId string
 }
 
 var c config
