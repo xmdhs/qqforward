@@ -46,8 +46,7 @@ func push(body []byte, ContentType string) error {
 	var ok isok
 	err = json.Unmarshal(t, &ok)
 	if !ok.OK || err != nil {
-		fmt.Println(string(t))
-		return ErrPush
+		return fmt.Errorf("push %v: %w", string(t), ErrPush)
 	}
 	return nil
 }

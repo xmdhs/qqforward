@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -28,6 +29,9 @@ func main() {
 			}
 			defer conn.Close()
 
+			cxt, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
 			conn.SetReadDeadline(time.Now().Add(pongWait))
 			for {
 				_, msg, err := conn.ReadMessage()
@@ -37,7 +41,7 @@ func main() {
 					break
 				}
 				conn.SetReadDeadline(time.Now().Add(pongWait))
-				doMsg(msg)
+				doMsg(cxt, msg)
 				if c.PrivateMsg {
 					doPrivateMsg(msg)
 				}
@@ -63,7 +67,9 @@ func doPrivateMsg(msg []byte) {
 	sendMsg(m, c.PrivateMsgTgId)
 }
 
-func doMsg(msg []byte) {
+var msgMap = make(map[int64]chan message)
+
+func doMsg(cxt context.Context, msg []byte) {
 	cond0 := checkMsg(msg)
 	if cond0 {
 		return
@@ -78,7 +84,22 @@ func doMsg(msg []byte) {
 	if !ok {
 		return
 	}
-	sendMsg(m, id)
+	ch, ok := msgMap[m.GroupID]
+	if !ok {
+		ch = make(chan message, 100)
+		msgMap[m.GroupID] = ch
+		go func() {
+			for {
+				select {
+				case <-cxt.Done():
+					return
+				case m := <-ch:
+					sendMsg(m, id)
+				}
+			}
+		}()
+	}
+	ch <- m
 }
 
 func sendMsg(m message, code string) {
