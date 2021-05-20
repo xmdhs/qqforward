@@ -115,21 +115,21 @@ func sendMsg(m message, code string) {
 	for _, cc := range cc {
 		switch cc.Type {
 		case "text":
-			push.Pushtext(header+cc.Data["text"], code, 8)
+			p.Pushtext(header+cc.Data["text"], code, 8)
 		case "image", "record":
 			if cc.Data["url"] == "" {
-				push.Pushtext(header+m.Message, code, 8)
+				p.Pushtext(header+m.Message, code, 8)
 			}
 			go pushFile(cc.Data["url"], header, code)
 		case "share":
-			push.Pushtext(header+cc.Data["url"], code, 8)
+			p.Pushtext(header+cc.Data["url"], code, 8)
 		default:
 			b, err := json.Marshal(cc)
 			if err != nil {
 				log.Println(err)
 				return
 			}
-			push.Pushtext(header+string(b), code, 8)
+			p.Pushtext(header+string(b), code, 8)
 		}
 	}
 }
@@ -152,12 +152,11 @@ func pushFile(url, header, id string) {
 
 	b, ctype, err := push.Downloadimg(url, 8)
 	if err != nil {
-		push.Pushtext(header+url, id, 5)
-
+		p.Pushtext(header+url, id, 5)
 	}
 	l := strings.Split(ctype, "/")
 	if len(l) != 2 {
-		push.Pushtext(header+url, id, 5)
+		p.Pushtext(header+url, id, 5)
 		return
 	}
 	filename := tosha256(b) + "." + l[1]
@@ -166,7 +165,7 @@ func pushFile(url, header, id string) {
 		log.Println(err)
 		return
 	}
-	push.Push(buff.Bytes(), c, 5)
+	p.Push(buff.Bytes(), c, 5)
 }
 
 func tosha256(data []byte) string {

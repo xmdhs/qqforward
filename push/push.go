@@ -14,9 +14,9 @@ import (
 	"unicode/utf8"
 )
 
-func Push(body []byte, ContentType string, a int) {
+func (p *PushTg) Push(body []byte, ContentType string, a int) {
 	for i := 0; i < a; i++ {
-		err := push(body, ContentType)
+		err := p.push(body, ContentType)
 		if err != nil {
 			log.Println(err)
 			time.Sleep(2 * time.Second)
@@ -26,8 +26,8 @@ func Push(body []byte, ContentType string, a int) {
 	}
 }
 
-func push(body []byte, ContentType string) error {
-	req, err := http.NewRequest("POST", "https://api.telegram.org/"+tgkey+"/sendDocument", bytes.NewReader(body))
+func (p *PushTg) push(body []byte, ContentType string) error {
+	req, err := http.NewRequest("POST", "https://api.telegram.org/"+p.tgkey+"/sendDocument", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("push: %w", err)
 	}
@@ -57,16 +57,18 @@ type isok struct {
 	OK bool `json:"ok"`
 }
 
-var tgkey string
-
-func SetTgkey(key string) {
-	tgkey = key
+type PushTg struct {
+	tgkey string
 }
 
-func pushtext(message, chatID string) error {
+func NewPushTg(key string) PushTg {
+	return PushTg{tgkey: key}
+}
+
+func (p *PushTg) pushtext(message, chatID string) error {
 	message = url.QueryEscape(message)
 	msg := "chat_id=" + chatID + "&text=" + message
-	req, err := http.NewRequest("POST", "https://api.telegram.org/"+tgkey+"/sendMessage", strings.NewReader(msg))
+	req, err := http.NewRequest("POST", "https://api.telegram.org/"+p.tgkey+"/sendMessage", strings.NewReader(msg))
 	if err != nil {
 		return fmt.Errorf("push: %w", err)
 	}
@@ -92,10 +94,10 @@ func pushtext(message, chatID string) error {
 
 var Pusherr = errors.New("推送失败")
 
-func aPushtext(message, chatID string, a int) {
+func (p *PushTg) aPushtext(message, chatID string, a int) {
 	var err error
 	for i := 0; i < a; i++ {
-		err = pushtext(message, chatID)
+		err = p.pushtext(message, chatID)
 		if err != nil {
 			log.Println(err)
 			time.Sleep(2 * time.Second)
@@ -105,10 +107,10 @@ func aPushtext(message, chatID string, a int) {
 	}
 }
 
-func Pushtext(message, chatID string, a int) {
+func (p *PushTg) Pushtext(message, chatID string, a int) {
 	l := Split(message, 4000)
 	for _, v := range l {
-		aPushtext(v, chatID, a)
+		p.aPushtext(v, chatID, a)
 	}
 }
 

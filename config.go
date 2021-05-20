@@ -29,7 +29,9 @@ func readConfig() {
 	}
 }
 
+var p push.PushTg
+
 func init() {
 	readConfig()
-	push.SetTgkey(c.TgToken)
+	p = push.NewPushTg(c.TgToken)
 }
