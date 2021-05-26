@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -35,9 +36,13 @@ func main() {
 			ch := make(chan []byte, 100)
 
 			callbackhub := NewEvent(cxt, ch)
-			callbackhub.OnMsg(doMsg)
+
+			m := msgMap{m: make(map[int64]chan *message)}
+
+			callbackhub.OnMsg(m.doMsg)
 			if c.PrivateMsg {
-				callbackhub.OnMsg(doPrivateMsg)
+				d := doPrivate{ch: make(chan *message, 100)}
+				callbackhub.OnMsg(d.doPrivateMsg)
 			}
 
 			conn.SetReadDeadline(time.Now().Add(pongWait))
@@ -55,39 +60,45 @@ func main() {
 	}
 }
 
-var doPrivateMsgCh chan *message
+type doPrivate struct {
+	ch chan *message
+	sync.Once
+}
 
-func doPrivateMsg(cxt context.Context, msg *message) {
+func (d *doPrivate) doPrivateMsg(cxt context.Context, msg *message) {
 	if msg.MsgType != "private" {
 		return
 	}
-	if doPrivateMsgCh == nil {
-		doPrivateMsgCh = make(chan *message, 100)
+
+	d.Do(func() {
 		go func() {
 			for {
 				select {
 				case <-cxt.Done():
 					return
-				case m := <-doPrivateMsgCh:
+				case m := <-d.ch:
 					sendMsg(m, c.PrivateMsgTgId)
 				}
 			}
 		}()
-	}
-	doPrivateMsgCh <- msg
+	})
+
+	d.ch <- msg
 }
 
-var msgMap = make(map[int64]chan *message)
+type msgMap struct {
+	m map[int64]chan *message
+}
 
-func doMsg(cxt context.Context, m *message) {
+func (msg *msgMap) doMsg(cxt context.Context, m *message) {
 	id, ok := c.QQgroup[strconv.FormatInt(m.GroupID, 10)]
 	if !ok {
 		return
 	}
-	ch, ok := msgMap[m.GroupID]
+	ch, ok := msg.m[m.GroupID]
 	if !ok {
 		ch = make(chan *message, 100)
-		msgMap[m.GroupID] = ch
+		msg.m[m.GroupID] = ch
 		go func() {
 			for {
 				select {
