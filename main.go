@@ -48,17 +48,33 @@ func main() {
 					time.Sleep(1 * time.Second)
 					break
 				}
+				conn.SetReadDeadline(time.Now().Add(pongWait))
 				ch <- msg
 			}
 		}()
 	}
 }
 
+var doPrivateMsgCh chan *message
+
 func doPrivateMsg(cxt context.Context, msg *message) {
 	if msg.MsgType != "private" {
 		return
 	}
-	sendMsg(msg, c.PrivateMsgTgId)
+	if doPrivateMsgCh == nil {
+		doPrivateMsgCh = make(chan *message, 100)
+		go func() {
+			for {
+				select {
+				case <-cxt.Done():
+					return
+				case m := <-doPrivateMsgCh:
+					sendMsg(m, c.PrivateMsgTgId)
+				}
+			}
+		}()
+	}
+	doPrivateMsgCh <- msg
 }
 
 var msgMap = make(map[int64]chan *message)
