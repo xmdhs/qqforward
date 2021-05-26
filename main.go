@@ -32,6 +32,14 @@ func main() {
 			cxt, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
+			ch := make(chan []byte, 100)
+
+			callbackhub := NewEvent(cxt, ch)
+			callbackhub.OnMsg(doMsg)
+			if c.PrivateMsg {
+				callbackhub.OnMsg(doPrivateMsg)
+			}
+
 			conn.SetReadDeadline(time.Now().Add(pongWait))
 			for {
 				_, msg, err := conn.ReadMessage()
@@ -40,53 +48,29 @@ func main() {
 					time.Sleep(1 * time.Second)
 					break
 				}
-				conn.SetReadDeadline(time.Now().Add(pongWait))
-				doMsg(cxt, msg)
-				if c.PrivateMsg {
-					doPrivateMsg(msg)
-				}
+				ch <- msg
 			}
 		}()
 	}
 }
 
-func doPrivateMsg(msg []byte) {
-	cond0 := checkMsg(msg)
-	if cond0 {
+func doPrivateMsg(cxt context.Context, msg *message) {
+	if msg.MsgType != "private" {
 		return
 	}
-	var m message
-	err := json.Unmarshal(msg, &m)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	if m.MsgType != "private" {
-		return
-	}
-	sendMsg(m, c.PrivateMsgTgId)
+	sendMsg(msg, c.PrivateMsgTgId)
 }
 
-var msgMap = make(map[int64]chan message)
+var msgMap = make(map[int64]chan *message)
 
-func doMsg(cxt context.Context, msg []byte) {
-	cond0 := checkMsg(msg)
-	if cond0 {
-		return
-	}
-	var m message
-	err := json.Unmarshal(msg, &m)
-	if err != nil {
-		log.Println(err)
-		return
-	}
+func doMsg(cxt context.Context, m *message) {
 	id, ok := c.QQgroup[strconv.FormatInt(m.GroupID, 10)]
 	if !ok {
 		return
 	}
 	ch, ok := msgMap[m.GroupID]
 	if !ok {
-		ch = make(chan message, 100)
+		ch = make(chan *message, 100)
 		msgMap[m.GroupID] = ch
 		go func() {
 			for {
@@ -102,7 +86,7 @@ func doMsg(cxt context.Context, msg []byte) {
 	ch <- m
 }
 
-func sendMsg(m message, code string) {
+func sendMsg(m *message, code string) {
 	cc := cqcode(m.Message)
 
 	qq := strconv.FormatInt(m.UserID, 10)
@@ -132,19 +116,6 @@ func sendMsg(m message, code string) {
 			p.Pushtext(header+string(b), code, 8)
 		}
 	}
-}
-
-func checkMsg(msg []byte) bool {
-	var e event
-	err := json.Unmarshal(msg, &e)
-	if err != nil {
-		log.Println(err)
-		return true
-	}
-	if e.Type != "message" {
-		return true
-	}
-	return false
 }
 
 func pushFile(url, header, id string) {
