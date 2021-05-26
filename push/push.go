@@ -85,14 +85,12 @@ func (p *PushTg) pushtext(message, chatID string) error {
 		return fmt.Errorf("push: %w", err)
 	}
 	var ok isok
-	json.Unmarshal(t, &ok)
-	if !ok.OK {
-		return Pusherr
+	err = json.Unmarshal(t, &ok)
+	if !ok.OK || err != nil {
+		return fmt.Errorf("push %v: %w", string(t), ErrPush)
 	}
 	return nil
 }
-
-var Pusherr = errors.New("推送失败")
 
 func (p *PushTg) aPushtext(message, chatID string, a int) {
 	var err error
