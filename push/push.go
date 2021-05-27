@@ -98,7 +98,7 @@ func (p *PushTg) aPushtext(message, chatID string, a int) {
 		err = p.pushtext(message, chatID)
 		if err != nil {
 			log.Println(err)
-			time.Sleep(2 * time.Second)
+			time.Sleep(15 * time.Second)
 			continue
 		}
 		break
