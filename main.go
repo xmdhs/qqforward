@@ -50,7 +50,7 @@ func main() {
 			if len(c.Msg) > 0 {
 				temp := callbackhub.OnMsg
 				callbackhub.OnMsg = func(cxt context.Context, msg *message) {
-					go check(c.Msg, c.PrivateMsgTgId)
+					go check(c.Msg, c.PrivateMsgTgId)(cxt, msg)
 					temp(cxt, msg)
 				}
 			}
