@@ -28,7 +28,9 @@ func (e *Event) onMsg(cxt context.Context, msg []byte) {
 		log.Println(err)
 		return
 	}
-	e.OnMsg(cxt, &m)
+	if e.OnMsg != nil {
+		e.OnMsg(cxt, &m)
+	}
 }
 
 func (e *Event) do(cxt context.Context) {
