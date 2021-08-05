@@ -47,6 +47,7 @@ func check(msg []string, chatID string) func(cxt context.Context, msg *message) 
 				}
 				p.Pushtext(strconv.FormatInt(m.GroupID, 10)+" : "+name, chatID, 8)
 				sendMsg(m, chatID)
+				break
 			}
 		}
 	}
