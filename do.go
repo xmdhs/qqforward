@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"log"
 	"strconv"
 	"strings"
 	"sync"
@@ -37,14 +35,17 @@ func (d *doPrivate) doPrivateMsg(cxt context.Context, msg *message) {
 
 func check(msg []string, chatID string) func(cxt context.Context, msg *message) {
 	return func(cxt context.Context, m *message) {
+		if m.MsgType != "group" {
+			return
+		}
+
 		for _, v := range msg {
 			if strings.Contains(m.Message, v) {
-				b, err := json.Marshal(m)
-				if err != nil {
-					log.Println(err)
-					return
+				name := m.Sender.Card
+				if name == "" {
+					name = m.Sender.Nickname
 				}
-				p.Pushtext(string(b), chatID, 8)
+				p.Pushtext(strconv.FormatInt(m.GroupID, 10)+" : "+name, chatID, 8)
 				sendMsg(m, chatID)
 			}
 		}
