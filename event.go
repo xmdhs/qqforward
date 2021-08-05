@@ -15,7 +15,7 @@ type Event struct {
 func NewEvent(cxt context.Context, ch chan []byte) *Event {
 	e := &Event{}
 	e.ch = ch
-
+	e.funcs = make(map[string]func(context.Context, []byte))
 	e.funcs["message"] = e.onMsg
 	go e.do(cxt)
 	return e
