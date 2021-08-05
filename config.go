@@ -14,6 +14,7 @@ type config struct {
 	WsToken        string
 	PrivateMsg     bool
 	PrivateMsgTgId string
+	Msg            []string
 }
 
 var c config

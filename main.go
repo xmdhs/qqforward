@@ -11,7 +11,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -39,10 +38,21 @@ func main() {
 
 			m := msgMap{m: make(map[int64]chan *message)}
 
-			callbackhub.OnMsg(m.doMsg)
+			callbackhub.OnMsg = m.doMsg
 			if c.PrivateMsg {
 				d := doPrivate{ch: make(chan *message, 100)}
-				callbackhub.OnMsg(d.doPrivateMsg)
+				temp := callbackhub.OnMsg
+				callbackhub.OnMsg = func(cxt context.Context, msg *message) {
+					go d.doPrivateMsg(cxt, msg)
+					temp(cxt, msg)
+				}
+			}
+			if len(c.Msg) > 0 {
+				temp := callbackhub.OnMsg
+				callbackhub.OnMsg = func(cxt context.Context, msg *message) {
+					check(c.Msg, c.PrivateMsgTgId)
+					temp(cxt, msg)
+				}
 			}
 
 			conn.SetReadDeadline(time.Now().Add(pongWait))
@@ -60,60 +70,7 @@ func main() {
 	}
 }
 
-type doPrivate struct {
-	ch chan *message
-	sync.Once
-}
-
-func (d *doPrivate) doPrivateMsg(cxt context.Context, msg *message) {
-	if msg.MsgType != "private" {
-		return
-	}
-
-	d.Do(func() {
-		go func() {
-			for {
-				select {
-				case <-cxt.Done():
-					return
-				case m := <-d.ch:
-					sendMsg(m, c.PrivateMsgTgId)
-				}
-			}
-		}()
-	})
-
-	d.ch <- msg
-}
-
-type msgMap struct {
-	m map[int64]chan *message
-}
-
-func (msg *msgMap) doMsg(cxt context.Context, m *message) {
-	id, ok := c.QQgroup[strconv.FormatInt(m.GroupID, 10)]
-	if !ok {
-		return
-	}
-	ch, ok := msg.m[m.GroupID]
-	if !ok {
-		ch = make(chan *message, 100)
-		msg.m[m.GroupID] = ch
-		go func() {
-			for {
-				select {
-				case <-cxt.Done():
-					return
-				case m := <-ch:
-					sendMsg(m, id)
-				}
-			}
-		}()
-	}
-	ch <- m
-}
-
-func sendMsg(m *message, code string) {
+func sendMsg(m *message, chatID string) {
 	cc := cqcode(m.Message)
 
 	qq := strconv.FormatInt(m.UserID, 10)
@@ -126,21 +83,21 @@ func sendMsg(m *message, code string) {
 	for _, cc := range cc {
 		switch cc.Type {
 		case "text":
-			p.Pushtext(header+cc.Data["text"], code, 8)
+			p.Pushtext(header+cc.Data["text"], chatID, 8)
 		case "image", "record":
 			if cc.Data["url"] == "" {
-				p.Pushtext(header+m.Message, code, 8)
+				p.Pushtext(header+m.Message, chatID, 8)
 			}
-			go pushFile(cc.Data["url"], header, code)
+			go pushFile(cc.Data["url"], header, chatID)
 		case "share":
-			p.Pushtext(header+cc.Data["url"], code, 8)
+			p.Pushtext(header+cc.Data["url"], chatID, 8)
 		default:
 			b, err := json.Marshal(cc)
 			if err != nil {
 				log.Println(err)
 				return
 			}
-			p.Pushtext(header+string(b), code, 8)
+			p.Pushtext(header+string(b), chatID, 8)
 		}
 	}
 }
